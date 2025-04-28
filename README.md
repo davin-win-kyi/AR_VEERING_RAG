@@ -53,6 +53,15 @@ By default, this will:
 
 > **Note:** To customize paths or loaders, edit the corresponding lines in `rag_json_generation.py`.
 
+How to load documentation:
+```bash
+# link documentation
+shapes = WebBaseLoader("https://acegikmo.com/shapes/docs").load()
+
+# file documentation
+cs_docs = TextLoader("/Users/davinwinkyi/rag_json_generation/types.cs", encoding="utf-8").load()
+```
+
 ## Output
 
 - **`docsEmbedding.json`** – An array of objects, each with:
