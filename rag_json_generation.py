@@ -3,7 +3,7 @@ from langchain.document_loaders import WebBaseLoader, SitemapLoader, TextLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 
-os.environ["OPENAI_API_KEY"] = ""
+os.environ["OPENAI_API_KEY"] = "OPENAI_API_KEY"
 
 # 1. Load docs from all three sources
 # — your existing web sources:
