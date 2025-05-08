@@ -1,36 +1,51 @@
-import os, json
-from langchain.document_loaders import WebBaseLoader, SitemapLoader, TextLoader
-from langchain.text_splitter import CharacterTextSplitter
+import json
+from langchain_unstructured import UnstructuredLoader  # for local files
+from langchain_community.document_loaders import UnstructuredURLLoader  # for URLs
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 
-os.environ["OPENAI_API_KEY"] = "OPENAI_API_KEY"
+# 0. Your OpenAI key
+api_key = "OPEN API KEY"
 
-# 1. Load docs from all three sources
-# — your existing web sources:
-shapes = WebBaseLoader("https://acegikmo.com/shapes/docs").load()
-unity  = SitemapLoader("https://docs.unity.com/sitemap.xml").load()
+# 1. Load & partition
 
-# — **new**: load your local types.cs
-#    if it's a single file:
-cs_docs = TextLoader("/Users/davinwinkyi/rag_json_generation/types.cs", encoding="utf-8").load()
+# — local C# file
+cs_docs = UnstructuredLoader(
+    file_path="/Users/davinwinkyi/rag_json_generation/types.cs",
+    mode="elements"        # split into headings, paragraphs, code blocks, etc.
+).load()
 
-#    or, if you have a folder full of .cs files:
-# from langchain.document_loaders import DirectoryLoader
-# cs_docs = DirectoryLoader("/path/to/cs_folder", glob="*.cs", loader_cls=TextLoader).load()
+# — remote Shape docs
+shape_docs = UnstructuredURLLoader(
+    urls=["https://acegikmo.com/shapes/docs"],
+    mode="elements"
+).load()
 
-all_docs = cs_docs + shapes + unity
+# — remote Unity docs
+unity_docs = UnstructuredURLLoader(
+    urls=["https://docs.unity.com/"],
+    mode="elements"
+).load()
 
-# 2. Chunk
-splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-chunks   = splitter.split_documents(all_docs)
-texts    = [c.page_content for c in chunks]
+all_docs = cs_docs + shape_docs + unity_docs
 
-# 3. Embed
-emb = OpenAIEmbeddings(model="text-embedding-ada-002")
+# 2. Chunk semantically (paragraph‑level first, then chars)
+splitter = RecursiveCharacterTextSplitter(
+    chunk_size=1000,
+    chunk_overlap=200,
+    separators=["\n\n", "\n", " ", ""]
+)
+chunks = splitter.split_documents(all_docs)
+texts  = [c.page_content for c in chunks]
+
+# 3. Embed (passing the key directly)
+emb     = OpenAIEmbeddings(openai_api_key=api_key, model="text-embedding-ada-002")
 vectors = emb.embed_documents(texts)
 
-# 4. Dump to JSON
+# 4. Serialize
 out = [{"text": t, "embedding": v} for t, v in zip(texts, vectors)]
-with open("/Users/davinwinkyi/rag_json_generation/docsEmbedding.json","w") as f:
+with open("docsEmbedding.json", "w") as f:
     json.dump(out, f, indent=2)
+
+
 
